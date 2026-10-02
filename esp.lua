@@ -6,6 +6,15 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- ===================== STATE =====================
+local IGNORED_TOOLS = {
+	["Ruler Axe"] = true,
+	["(Click To Teleport)"] = true,
+}
+
+local function isIgnored(toolName)
+	return IGNORED_TOOLS[toolName] == true
+end
+
 local mode = "none" -- "none" | "remove" | "equip"
 local selectedToolName = nil
 local activeButtonRef = nil
@@ -209,7 +218,7 @@ local function getUniqueToolNames()
 	local function addFromContainer(container)
 		if not container then return end
 		for _, item in container:GetChildren() do
-			if item:IsA("Tool") and not seen[item.Name] then
+			if item:IsA("Tool") and not seen[item.Name] and not isIgnored(item.Name) then
 				seen[item.Name] = true
 				table.insert(names, item.Name)
 			end
@@ -224,6 +233,7 @@ local function getUniqueToolNames()
 end
 
 local function findToolInBackpack(name)
+	if isIgnored(name) then return nil end
 	local backpack = getBackpack()
 	if not backpack then return nil end
 	for _, item in backpack:GetChildren() do
@@ -238,7 +248,7 @@ local function getFirstAvailableToolName()
 	local backpack = getBackpack()
 	if not backpack then return nil end
 	for _, item in backpack:GetChildren() do
-		if item:IsA("Tool") then
+		if item:IsA("Tool") and not isIgnored(item.Name) then
 			return item.Name
 		end
 	end
@@ -336,7 +346,7 @@ task.spawn(function()
 		if not char then continue end
 
 		for _, child in char:GetChildren() do
-			if child:IsA("Tool") then
+			if child:IsA("Tool") and not isIgnored(child.Name) then
 				child.Parent = player:FindFirstChild("Backpack")
 			end
 		end
@@ -357,8 +367,8 @@ task.spawn(function()
 
 		if equipped then
 			-- Tool is equipped, check if it matches selected name
-			if equipped.Name == selectedToolName then
-				-- All good, keep it equipped
+			if equipped.Name == selectedToolName or isIgnored(equipped.Name) then
+				-- All good, keep it equipped (ignored tools are never touched)
 				continue
 			else
 				-- Wrong tool equipped, unequip it
